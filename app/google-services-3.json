@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "276260127901",
+    "project_id": "vincularte-2b69f",
+    "storage_bucket": "vincularte-2b69f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:276260127901:android:18a4b70df8c0ff9b834074",
+        "android_client_info": {
+          "package_name": "com.example.vincularte"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBiSu6L1PoyLsNDjnh108_FaXfl_HpuKo0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,5 +1,4 @@
 package com.example.vincularte
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,15 +12,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.vincularte.ui.theme.VinculArteTheme
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import com.example.vincularte.ui.screens.profile.ProfileScreen
+import com.vincularte.ui.screens.diary.DiaryScreen
+import com.vincularte.ui.screens.home.HomeScreen
+import android.content.Context
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.platform.LocalContext
+import com.example.vincularte.ui.screens.fotos.FotosScreen
+import com.example.vincularte.ui.screens.habitos.HabitosScreen
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.AuthCredential
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,7 +52,9 @@ class MainActivity : ComponentActivity() {
                     composable("register") { RegisterScreen(navController) }
                     composable("home") { HomeScreen(navController) }
                     composable("perfil") { ProfileScreen(navController) }
-                    composable("Diario") {DiaryScreen(navController)}
+                    composable("diary") { DiaryScreen(navController) }
+                    composable("habit") { HabitosScreen(navController) }
+                    composable(route = "fotos") { FotosScreen() }
                     }
                 }
             }
@@ -63,7 +82,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Text(
                     "¡Bienvenido a VinculArte!",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 26.sp),
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 32.sp,fontWeight = FontWeight.Bold,),
                     color = Color.Black,
                     textAlign = TextAlign.Center
                 )
@@ -81,122 +100,78 @@ class MainActivity : ComponentActivity() {
 
                 Button(
                     onClick = { navController.navigate("login") },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF90CAF9)), // 🎨 Azul claro
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3CCBDA)), // 🎨 Azul claro
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Siéntete Seguro", fontSize = 18.sp, color = Color.White)
+                    Text("Siéntete Seguro", fontSize = 18.sp, color = Color.Black)
                 }
             }
         }
     }
 
-    @Composable
-    fun LoginScreen(navController: NavHostController) {
-        var username by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
 
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.fondo),
-                contentDescription = "Fondo de Login",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                alpha = 0.3f
-            )
+@Composable
+fun LoginScreen(navController: NavHostController) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var loginError by remember { mutableStateOf<String?>(null) }
 
-            Column(
-                modifier = Modifier.padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    "Iniciar sesión",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 24.sp),
-                    color = Color.Black,
-                    textAlign = TextAlign.Center
-                )
+    val context = LocalContext.current
 
-                Spacer(modifier = Modifier.height(16.dp))
+    val googleSignInClient = remember {
+        GoogleSignIn.getClient(
+            context,
+            GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestEmail() // 🔹 Solo obtendrá el correo del usuario, no autenticar en Firebase
+                .build()
+        )
+    }
 
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Correo electrónico o usuario") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+    val googleLoginLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+        try {
+            val account = task.getResult(ApiException::class.java)
+            if (account != null) {
+                val email = account.email ?: "No se obtuvo el correo"
+                val displayName = account.displayName ?: "Nombre desconocido"
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Log.i("GoogleSignIn", "Usuario: $displayName, Email: $email")
 
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Contraseña") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = {
-                        navController.navigate("home") {
-                            popUpTo("login") { inclusive = true }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Iniciar sesión", fontSize = 18.sp, color = Color.White)
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                TextButton(onClick = { navController.navigate("register") }) {
-                    Text("Crear cuenta", fontSize = 16.sp)
-                }
+                navController.navigate("home") // ✅ Redirige a home tras login exitoso
+            } else {
+                loginError = "No se pudo obtener la cuenta de Google"
             }
+        } catch (e: ApiException) {
+            loginError = "Google Sign-In falló: ${e.message}"
         }
     }
 
-    @Composable
-    fun RegisterScreen(navController: NavHostController) {
-        var username by remember { mutableStateOf("") }
-        var email by remember { mutableStateOf("") }
-        var password by remember { mutableStateOf("") }
-
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Image(
-            painter = painterResource(id = R.drawable.fondo),
-            contentDescription = "Fondo de bienvenida",
-            modifier = Modifier.fillMaxSize(),
+            painter = painterResource(id = R.drawable.fondo2),
+            contentDescription = "Fondo de Login",
             contentScale = ContentScale.Crop,
-            alpha = 0.3f
+            modifier = Modifier.fillMaxSize()
         )
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
+            modifier = Modifier.padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Registro", style = MaterialTheme.typography.headlineMedium.copy(fontSize = 26.sp))
+            Text("Iniciar sesión", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Nombre de usuario") },
+                label = { Text("Correo electrónico o usuario") },
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Correo electrónico") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -209,182 +184,209 @@ class MainActivity : ComponentActivity() {
 
             Button(
                 onClick = { navController.navigate("home") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3CCBDA))
             ) {
-                Text("Registrarse", fontSize = 18.sp, color = Color.White)
+                Text("Iniciar sesión", fontSize = 18.sp, color = Color.White)
             }
-        }
-    }
 
-    @Composable
-    fun HomeScreen(navController: NavHostController) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-        Image(
-            painter = painterResource(id = R.drawable.fondo),
-            contentDescription = "Fondo de bienvenida",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-            alpha = 0.3f
-        )
-
-        Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text("Bienvenido a VinculArte", style = MaterialTheme.typography.headlineMedium)
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { navController.navigate("perfil") }) {
-                Text("Ir a perfil")
-            }
-        }
-    }
-
-    @Composable
-    fun ProfileScreen(navController: NavHostController) {
-        var username by remember { mutableStateOf(TextFieldValue("Usuario Anónimo")) }
-        var email by remember { mutableStateOf(TextFieldValue("correo@example.com")) }
-        var bio by remember { mutableStateOf(TextFieldValue("Aquí puedes escribir algo sobre ti...")) }
-
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.fondo),
-                contentDescription = "Fondo de bienvenida",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                alpha = 0.3f
-            )
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Top
+            Button(
+                onClick = { navController.navigate("register") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3CCBDA))
             ) {
-                // ✅ Imagen de perfil
-                Image(
-                    painter = painterResource(id = R.drawable.perfil),
-                    contentDescription = "Imagen de perfil",
-                    modifier = Modifier.size(120.dp),
-                    contentScale = ContentScale.Crop
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // ✅ Campo de nombre de usuario
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Nombre de usuario") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // ✅ Campo de biografía
-                OutlinedTextField(
-                    value = bio,
-                    onValueChange = { bio = it },
-                    label = { Text("Biografía") },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 4
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // ✅ Botón de diario
-                Button(
-                    onClick = { navController.navigate("home") },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Guardar cambios", fontSize = 18.sp, color = Color.White)
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // ✅ Botón para regresar a la vista anterior
-                TextButton(onClick = { navController.navigate("Diario") }) {
-                    Text("Diario", fontSize = 16.sp)
-                }
+                Text("Crear cuenta", fontSize = 18.sp, color = Color.White)
             }
-        }
-    }
 
-@Composable
-fun DiaryScreen(navController: NavHostController) {
-    var inputText by remember { mutableStateOf("") }
-    var diaryEntries by remember { mutableStateOf<List<String>>(emptyList()) }
+            Spacer(modifier = Modifier.height(24.dp))
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        // ✅ Título siempre en la parte superior
-        Text(
-            text = "Diario de Emociones",
-            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 26.sp),
-            color = Color.Black,
-            textAlign = TextAlign.Center
-        )
+            // ✅ Botón para iniciar sesión con Google sin Web Client ID
+            Button(
+                onClick = { googleLoginLauncher.launch(googleSignInClient.signInIntent) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) {
+                Icon(imageVector = Icons.Default.Person, contentDescription = "Google Icon")
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ingresar con cuenta Google", fontSize = 18.sp, color = Color.White)
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-        // ✅ Campo de entrada
-        OutlinedTextField(
-            value = inputText,
-            onValueChange = { inputText = it },
-            label = { Text("Ingresa tu estado de ánimo") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // ✅ Botón para guardar la entrada
-        Button(
-            onClick = {
-                if (inputText.isNotBlank()) {
-                    diaryEntries = diaryEntries + inputText // Agrega al final de la lista
-                    inputText = "" // Limpia el campo
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Guardar", fontSize = 18.sp, color = Color.White)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // ✅ Lista de estados de ánimo con opción de eliminar cada entrada
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(diaryEntries) { entry ->
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.LightGray)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = entry,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                diaryEntries = diaryEntries.filter { it != entry } // Elimina la entrada
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                        ) {
-                            Text("Eliminar", color = Color.White)
-                        }
-                    }
-                }
+            loginError?.let {
+                Text(it, fontSize = 14.sp, color = Color.Red)
             }
         }
     }
 }
+
+
+
+
+@Composable
+fun RegisterScreen(navController: NavHostController) {
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    var cartaCompromisoNombre by remember { mutableStateOf("Ningún archivo seleccionado") }
+    var identificacionNombre by remember { mutableStateOf("Ningún archivo seleccionado") }
+    var rostroEscaneado by remember { mutableStateOf(false) }
+
+    var aceptaTerminos by remember { mutableStateOf(false) }
+    var mostrarError by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.fondo2),
+            contentDescription = "Fondo de Registro",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                "Registro",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = Color.Black,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Nombre completo") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Correo electrónico") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Contraseña") },
+                visualTransformation = PasswordVisualTransformation(),
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Carta compromiso
+            Text("Carta compromiso", fontWeight = FontWeight.SemiBold)
+            Button(
+                onClick = {
+                    cartaCompromisoNombre = "carta_compromiso.pdf"
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3CCBDA))
+            ) {
+                Text("Adjuntar archivo")
+            }
+            Text(cartaCompromisoNombre, fontSize = 12.sp, color = Color.DarkGray)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Identificación oficial
+            Text("Identificación oficial", fontWeight = FontWeight.SemiBold)
+            Button(
+                onClick = {
+                    identificacionNombre = "foto_ine_frontal.jpg"
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3CCBDA))
+            ) {
+                Text("Adjuntar foto")
+            }
+            Text(identificacionNombre, fontSize = 12.sp, color = Color.DarkGray)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Escaneo de rostro
+            Button(
+                onClick = {
+                    rostroEscaneado = true
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3CCBDA))
+            ) {
+                Text("Escanear rostro", color = Color.White)
+            }
+            if (rostroEscaneado) {
+                Text("Rostro escaneado correctamente ✅", fontSize = 12.sp, color = Color.Black)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Checkbox de Términos y Condiciones
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Checkbox(
+                    checked = aceptaTerminos,
+                    onCheckedChange = { aceptaTerminos = it }
+                )
+                Text(
+                    "Acepto los términos y condiciones",
+                    modifier = Modifier.padding(start = 8.dp),
+                    fontSize = 14.sp
+                )
+            }
+
+            if (mostrarError && !aceptaTerminos) {
+                Text(
+                    "Debes aceptar los términos y condiciones.",
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    if (aceptaTerminos) {
+                        navController.navigate("home")
+                    } else {
+                        mostrarError = true
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3CCBDA))
+            ) {
+                Text("Confirmar Registro", fontSize = 18.sp, color = Color.White)
+            }
+        }
+    }
+}
+
+
